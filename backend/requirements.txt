@@ -9,3 +9,5 @@ flask_migrate
 flask_restful
 pre-commit
 flask_cors
+waitress
+psycopg2

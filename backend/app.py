@@ -47,5 +47,7 @@ api.add_resource(Organizations, "/api/orgs")
 
 # init app
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, use_reloader=True, threaded=True)
+    from waitress import serve
+
+    port = int(os.environ.get("BACKEND_PORT", 5000))
+    serve(app, host="0.0.0.0", port=port)

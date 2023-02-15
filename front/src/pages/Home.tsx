@@ -8,6 +8,21 @@ import { postController } from "../controllers/post";
 import { FormPaper } from "../components/FormPaper";
 import { userSelector } from "../redux/slices/user";
 import { PostValues } from "./CreatePost";
+import { styled } from '@mui/material/styles';
+
+const ContentBlock = styled(Box)( ({theme}) => ({
+  width: '100%',
+  padding: theme.spacing(1),
+  margin: 'auto',
+  display: "flex",
+  justifyContent: "center",
+  [theme.breakpoints.down('md')]: {
+    flexDirection: 'column-reverse',
+  },
+  [theme.breakpoints.up('md')]: {
+    flexDirection: 'row',
+  },
+}));
 
 export const HomePage = () => {
   const posts = useSelector(allPostsSelector);
@@ -23,8 +38,6 @@ export const HomePage = () => {
     return pos.org;
   });
 
-  console.log(userOrgNames, user.positions);
-
   posts.forEach((post: PostData) => {
     if (userOrgNames.includes(post.orgName)) {
       selfPost.push(post);
@@ -38,15 +51,7 @@ export const HomePage = () => {
   }, []);
 
   return (
-    <Box
-      sx={{
-        margin: "auto",
-        display: "flex",
-        justifyContent: "center",
-        flexDirection: { md: "row", sm: "column", sx: "column" },
-        p: 2
-      }}
-    >
+    <ContentBlock>
       <Box
         sx={{
           alignSelf: "center",
@@ -79,8 +84,6 @@ export const HomePage = () => {
           ))}
         </List>
       </Box>
-
-      <Divider orientation="vertical" />
 
       <Box
         sx={{
@@ -120,6 +123,6 @@ export const HomePage = () => {
               )}
         </List>
       </Box>
-    </Box>
+    </ContentBlock>
   );
 };

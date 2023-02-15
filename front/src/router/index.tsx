@@ -12,6 +12,7 @@ import { CreateOrgPage } from '../pages/CreateOrg';
 import { CreatePostPage } from '../pages/CreatePost';
 import { HomePage } from '../pages/Home';
 import { CreateReviewPage } from '../pages/CreateReview';
+import { OrgPage } from '../pages/Org';
 
 export const router = createBrowserRouter([
   {
@@ -46,6 +47,10 @@ export const router = createBrowserRouter([
       {
         path: `${ROUTES.REVIEW_CREATE}/:postId`,
         element: <CreateReviewPage/>
+      },
+      {
+        path: `${ROUTES.ORG}/:orgId`,
+        element: <OrgPage/>
       }
     ]
   }

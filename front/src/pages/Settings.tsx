@@ -5,12 +5,13 @@ import { checkLogin } from "../helpers/checkers/login";
 import { checkName } from "../helpers/checkers/name";
 import { useSelector, useDispatch } from "../hooks/useRedux";
 import { type User, userSelector } from "../redux/slices/user";
-import { Alert, Button, Checkbox, FormControlLabel } from "@mui/material";
+import { Alert, Box, Button, Checkbox, FormControlLabel } from "@mui/material";
 import { checkPassword } from "../helpers/checkers/password";
 import { FormPaper } from "../components/FormPaper";
 import { TextField } from "../components/TextField";
 import { FormPasswordControl } from "../components/FormPasswordControl";
 import { userController } from "../controllers/user";
+import { styled } from "@mui/material/styles";
 
 type UserData = Omit<User, "positions">;
 
@@ -44,6 +45,17 @@ const validateData = (values: User): UserErrors => {
 
   return errorValues;
 };
+
+const FlexBox = styled(Box)(({theme}) => ({
+  marginTop: theme.spacing(4),
+  display: 'flex',
+  [theme.breakpoints.down('md')]: {
+    flexDirection: "column",
+  },
+  [theme.breakpoints.up('md')]: {
+    backgroundColor: 'row',
+  },
+}))
 
 const validatePassword = (values: PasswordValues) => {
   const errorsPassword: PasswordErrors = {};
@@ -118,7 +130,7 @@ export const SettingsPage = () => {
   };
 
   return (
-    <>
+    <FlexBox>
       <FormPaper handleSubmit={formikData.handleSubmit}>
         <TextField
           disabled={!isChangingData}
@@ -195,6 +207,6 @@ export const SettingsPage = () => {
           Изменить
         </Button>
       </FormPaper>
-    </>
+    </FlexBox>
   );
 };

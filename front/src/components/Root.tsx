@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   Box,
   Button,
@@ -14,19 +14,24 @@ import {
   ListItem,
   ListItemButton,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  InputBase,
 } from "@mui/material";
 import {
-  Menu as MenuIcon, ChevronLeft, Note,
+  Menu as MenuIcon,
+  ChevronLeft,
   type SvgIconComponent,
   Settings,
   ExitToApp,
   AddBox,
-  NoteAdd
+  NoteAdd,
+  Search as SearchIcon,
 } from "@mui/icons-material";
 import { Outlet, useNavigate } from "react-router-dom";
-import MuiAppBar, { type AppBarProps as MuiAppBarProps } from "@mui/material/AppBar";
-import { styled } from "@mui/material/styles";
+import MuiAppBar, {
+  type AppBarProps as MuiAppBarProps,
+} from "@mui/material/AppBar";
+import { alpha, styled } from "@mui/material/styles";
 import { ROUTES } from "../router/routerList";
 import { loaderSelector } from "../redux/slices/loading";
 import { useDispatch, useSelector } from "../hooks/useRedux";
@@ -35,22 +40,24 @@ import {
   deleteUser,
   loggedInSelector,
   type UserPosition,
-  userSelector
+  userSelector,
 } from "../redux/slices/user";
-// import  from '@mui/icons-material/Settings';
+import { orgController } from "../controllers/org";
+import { OrgFromServer } from "../models/org";
 
 export const drawerOpenWidth = "240px";
-interface isOpen {
+type IsOpen = {
   open: boolean;
-}
+};
 
-type AppBarProps = MuiAppBarProps & isOpen;
-type MainProps = isOpen;
+type AppBarProps = MuiAppBarProps & IsOpen;
+type MainProps = IsOpen;
 
 interface LinkProps {
   title: string;
   icon: SvgIconComponent;
-  urlFor: ROUTES;
+  urlFor?: ROUTES;
+  isSearch?: boolean;
 }
 
 type Links = LinkProps[];
@@ -60,36 +67,88 @@ const useStyles = makeStyles({
     transition: "all 0.3s !important",
     marginLeft: "10px !important",
     "&:hover": {
-      marginLeft: "20px !important"
-    }
-  }
+      marginLeft: "20px !important",
+    },
+  },
 });
 const links: Links = [
   {
     title: "Настройки",
     icon: (<Settings htmlColor="white" />) as unknown as SvgIconComponent,
-    urlFor: ROUTES.PROFILE_SETTINGS
+    urlFor: ROUTES.PROFILE_SETTINGS,
   },
   {
     title: "Новый проект",
     icon: (<AddBox htmlColor="white" />) as unknown as SvgIconComponent,
-    urlFor: ROUTES.CREATE_ORG
-  }
+    urlFor: ROUTES.CREATE_ORG,
+  },
+  {
+    title: "Найти проект",
+    icon: (<SearchIcon htmlColor="white" />) as unknown as SvgIconComponent,
+    isSearch: true,
+  },
 ];
+
+const Search = styled("div")<IsOpen>(({ theme, open }) => ({
+  position: "relative",
+  borderRadius: theme.shape.borderRadius,
+  backgroundColor: alpha(theme.palette.common.white, 0.35),
+  opacity: 1,
+  transition: theme.transitions.create(["opacity", "margin-top"], {
+    easing: theme.transitions.easing.easeOut,
+    duration: "200ms",
+  }),
+  "&:hover": {
+    backgroundColor: alpha(theme.palette.common.white, 0.45),
+  },
+  ...(!open && {
+    transition: theme.transitions.create(["opacity", "margin-top"], {
+      easing: theme.transitions.easing.easeOut,
+      duration: "200ms",
+    }),
+    marginTop: "-30px",
+    opacity: 0,
+  }),
+}));
+
+const SearchIconWrapper = styled("div")(({ theme }) => ({
+  padding: theme.spacing(0, 2),
+  height: "100%",
+  position: "absolute",
+  pointerEvents: "none",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+}));
+
+const StyledInputBase = styled(InputBase)(({ theme }) => ({
+  color: "inherit",
+  "& .MuiInputBase-input": {
+    padding: theme.spacing(1, 1, 1, 0),
+    paddingLeft: `calc(1em + ${theme.spacing(4)})`,
+    transition: theme.transitions.create("width"),
+    [theme.breakpoints.up("sm")]: {
+      width: "12ch",
+      "&:focus": {
+        width: "14ch",
+      },
+    },
+  },
+}));
 
 const AppBar = styled(MuiAppBar)<AppBarProps>(({ theme, open }) => ({
   transition: theme.transitions.create(["margin", "width"], {
     easing: theme.transitions.easing.sharp,
-    duration: theme.transitions.duration.leavingScreen
+    duration: theme.transitions.duration.leavingScreen,
   }),
   ...(open && {
     width: `calc(100% - ${drawerOpenWidth})`,
     marginLeft: drawerOpenWidth,
     transition: theme.transitions.create(["margin", "width"], {
       easing: theme.transitions.easing.easeOut,
-      duration: theme.transitions.duration.enteringScreen
-    })
-  })
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+  }),
 }));
 
 const DrawerHeader = styled("div")<{ bgColor?: string }>(
@@ -100,7 +159,7 @@ const DrawerHeader = styled("div")<{ bgColor?: string }>(
     // necessary for content to be below app bar
     ...theme.mixins.toolbar,
     justifyContent: "flex-end",
-    backgroundColor: bgColor
+    backgroundColor: bgColor,
   })
 );
 
@@ -108,20 +167,23 @@ const Main = styled("main")<MainProps>(({ theme, open }) => ({
   padding: theme.spacing(3),
   transition: theme.transitions.create("margin", {
     easing: theme.transitions.easing.sharp,
-    duration: theme.transitions.duration.leavingScreen
+    duration: theme.transitions.duration.leavingScreen,
   }),
   marginLeft: `-${drawerOpenWidth}`,
   ...(open && {
     transition: theme.transitions.create("margin", {
       easing: theme.transitions.easing.easeOut,
-      duration: theme.transitions.duration.enteringScreen
+      duration: theme.transitions.duration.enteringScreen,
     }),
-    marginLeft: 0
-  })
+    marginLeft: 0,
+  }),
 }));
 
 export const Root = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [selectedOrgs, setSelectedOrgs] = useState([] as OrgFromServer[]);
+  const [isSearchOpen, setSearchOpen] = useState(false);
+
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const isLoading = useSelector(loaderSelector);
@@ -140,8 +202,8 @@ export const Root = () => {
           icon: (
             <ExitToApp htmlColor="white" />
           ) as unknown as SvgIconComponent,
-          urlFor: ROUTES.LOGIN
-        }
+          urlFor: ROUTES.LOGIN,
+        },
       ]
     : links;
 
@@ -151,17 +213,33 @@ export const Root = () => {
       {
         title: "Создать Пост",
         icon: (<NoteAdd htmlColor="white" />) as unknown as SvgIconComponent,
-        urlFor: ROUTES.CREATE_POST
-      }
+        urlFor: ROUTES.CREATE_POST,
+      },
     ];
   }
+
+  const handleChangeSearch = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.value)
+        orgController
+          .getSelectedOrgs(e.target.value)
+          .then((orgs) => setSelectedOrgs(orgs));
+    },
+    []
+  );
 
   const handleClickDrawer = () => {
     setIsOpen(!isOpen);
   };
 
-  const navigateToLogin = () => { navigate(ROUTES.LOGIN); };
-  const navigateHome = () => { navigate(ROUTES.HOME); };
+  const handleClickSearch = () => setSearchOpen((open) => !open);
+
+  const navigateToLogin = () => {
+    navigate(ROUTES.LOGIN);
+  };
+  const navigateHome = () => {
+    navigate(ROUTES.HOME);
+  };
 
   const handleAppBarBtnClick = () => {
     if (logged) {
@@ -216,8 +294,8 @@ export const Root = () => {
           "& .MuiDrawer-paper": {
             backgroundColor: "black",
             width: drawerOpenWidth,
-            boxSizing: "border-box"
-          }
+            boxSizing: "border-box",
+          },
         }}
         variant="persistent"
         anchor="left"
@@ -232,13 +310,16 @@ export const Root = () => {
         <Divider sx={{ width: "90%", margin: "0 auto" }} color="white" />
 
         <List>
-          {linkList.map(({ title, icon, urlFor }, index) => (
+          {linkList.map(({ title, icon, urlFor, isSearch }, index) => (
             <ListItem key={index} disablePadding>
               <ListItemButton
                 className={classes.iconRoot}
                 onClick={() => {
-                  navigate(urlFor);
-                  handleClickDrawer();
+                  if (urlFor) {
+                    navigate(urlFor);
+                    handleClickDrawer();
+                  }
+                  if (isSearch) handleClickSearch();
                 }}
               >
                 <ListItemIcon>{icon}</ListItemIcon>
@@ -248,15 +329,49 @@ export const Root = () => {
                       color: "white",
                       fontWeight: 600,
                       fontSize: "1.2rem",
-                      mr: 5
-                    }
+                      mr: 5,
+                    },
                   }}
                   primary={title}
                 />
               </ListItemButton>
             </ListItem>
           ))}
+
+          <ListItem key={linkList.length + 10}>
+            <Search open={isSearchOpen}>
+              <SearchIconWrapper>
+                <SearchIcon />
+              </SearchIconWrapper>
+              <StyledInputBase
+                onChange={handleChangeSearch}
+                disabled={!isSearchOpen}
+                placeholder="Search…"
+                inputProps={{ "aria-label": "search" }}
+              />
+            </Search>
+          </ListItem>
         </List>
+
+        {selectedOrgs.map(({ name, id }) => (
+          <Typography
+            sx={{
+              m: '0 2px',
+              cursor: 'pointer',
+              color: "#fff",
+              "&:hover": {
+                color: "white",
+              },
+            }}
+            variant="overline"
+            onClick={() => {
+              navigate(`${ROUTES.ORG}/${id}`);
+            }}
+          >
+            {name}
+          </Typography>
+        ))}
+
       </Drawer>
 
       <Main sx={{ display: "flex", width: "100%" }} open={isOpen}>

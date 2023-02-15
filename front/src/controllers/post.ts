@@ -5,28 +5,28 @@ import { closeLoading, setLoading } from "../redux/slices/loading";
 import { type PostData, setPosts } from "../redux/slices/post";
 import { type AppDispatch } from "../redux/store";
 
-async function createPost (
+function createPost (
   postValues: PostValues & { startData: Dayjs },
   orgName: string,
   dispatch: AppDispatch
 ) {
   dispatch(setLoading());
 
-  await postModel
+  return postModel
     .createPost(postValues, orgName)
     .then(() => {
       dispatch(closeLoading());
     })
     .catch(async (err) => {
       dispatch(closeLoading());
-      return await Promise.reject(err);
+      return Promise.reject(err);
     });
 }
 
-async function getAllPosts (dispatch: AppDispatch) {
+function getAllPosts (dispatch: AppDispatch) {
   dispatch(setLoading());
 
-  await postModel.getAllPosts().then((posts: PostFromServer[]) => {
+  return postModel.getAllPosts().then((posts: PostFromServer[]) => {
     const prettyPosts: PostData[] = posts.map((post) => {
       const prettyPost: PostData = {
         id: post.id,
@@ -45,4 +45,14 @@ async function getAllPosts (dispatch: AppDispatch) {
   });
 }
 
-export const postController = { createPost, getAllPosts };
+
+function getPostsByOrgId(id: number, dispatch: AppDispatch) {
+  dispatch(setLoading());
+
+  return postModel.getAllPosts().then((posts: PostFromServer[]) => {
+    dispatch(closeLoading());
+    return posts.filter(post => post.id_org === id);
+  })
+}
+
+export const postController = { createPost, getAllPosts, getPostsByOrgId };

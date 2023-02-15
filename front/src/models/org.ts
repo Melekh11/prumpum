@@ -15,7 +15,7 @@ export interface OrgFromServer {
   participants: number[];
 }
 
-async function createOrg (orgData: OrgValues) {
+function createOrg (orgData: OrgValues) {
   const requestParams: RequestInit = {
     method: "POST",
     mode: "cors",
@@ -24,9 +24,21 @@ async function createOrg (orgData: OrgValues) {
     body: JSON.stringify(orgData)
   };
 
-  return await api<OrgFromServer>("/org", requestParams);
+  return api<OrgFromServer>("/org", requestParams);
+}
+
+function getAllOrgs() {
+  const requestParams: RequestInit = {
+    method: "GET",
+    mode: "cors",
+    referrerPolicy: "strict-origin-when-cross-origin",
+    headers: { "Content-Type": "application/json" },
+  };
+
+  return api<OrgFromServer[]>("/orgs", requestParams);
 }
 
 export const orgModal = {
-  createOrg
+  createOrg,
+  getAllOrgs
 };
